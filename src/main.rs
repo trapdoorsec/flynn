@@ -22,7 +22,7 @@ mod output;
 mod arguments;
 mod finding;
 mod scanner;
-use std::{path::PathBuf, str::FromStr};
+use std::path::PathBuf;
 
 use anyhow::Context;
 use arguments::Args;
@@ -30,8 +30,7 @@ use clap::Parser;
 use owo_colors::OwoColorize;
 
 use crate::scanner::scan;
-fn banner() -> String {
-    r#"
+const BANNER: &str = r#"
 
 
     ▐▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▌
@@ -55,9 +54,7 @@ fn banner() -> String {
     ▐▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▌
 
 
-"#
-    .to_string()
-}
+"#;
 
 fn resolve_git_dir(path: &PathBuf) -> anyhow::Result<PathBuf> {
     if !path.exists() {
@@ -103,7 +100,8 @@ fn resolve_output_file(output: &PathBuf) -> anyhow::Result<PathBuf> {
 
     Ok(output.to_path_buf())
 }
-fn safeprint(quiet: bool, string: String) {
+
+fn safeprint(quiet: bool, string: &str) {
     if !quiet {
         println!("{}", string)
     }
@@ -111,22 +109,22 @@ fn safeprint(quiet: bool, string: String) {
 
 fn run() -> anyhow::Result<()> {
     let args = Args::parse();
-    safeprint(args.quiet, banner());
+    safeprint(args.quiet, BANNER);
 
-    let git_dir = resolve_git_dir(&args.path);
-    let output_file = resolve_output_file(&args.output);
+    let git_dir = resolve_git_dir(&args.path)?;
+    let output_file = resolve_output_file(&args.output)?;
 
     let arg_list = format!("{:?}", args);
-    safeprint(args.quiet, arg_list);
+    safeprint(args.quiet, arg_list.as_str());
 
     let report = scan(
-        &git_dir?,
-        &output_file?,
+        &git_dir,
+        &output_file,
         args.min_severity,
         args.fail_on,
         args.format,
         args.quiet,
-    );
+    )?;
     Ok(())
 }
 
