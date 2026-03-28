@@ -136,6 +136,28 @@
 - Config values with shell metacharacters in ostensibly non-exec fields
 - Binary content in .git/config — shouldn't be there at all
 
+# Testing
+
+A test fixture generator builds a fully weaponized `.git` directory covering every check category. The fixture is not committed — it's generated on the fly.
+
+```bash
+# generate the fixture
+./test/setup_fixture.sh
+
+# run flynn against it
+cargo run -- test/fixtures/malicious_repo
+
+# with json output
+cargo run -- -f json -o findings.json test/fixtures/malicious_repo
+
+# clean up
+rm -rf test/fixtures/malicious_repo
+```
+
+The fixture includes: malicious config keys (fsmonitor, sshCommand, etc.), all 20 canonical hooks as executables, world-writable and symlinked hooks, unusual shebangs, a buried bare repo with the core.bare/core.worktree jailbreak, a gitdir redirect file, oversized loose objects and pack files, a crafted index, alternates pointing to external paths, a detached HEAD with raw SHA, path-traversal ref names, gitattributes with filter/diff/merge drivers, worktree entries pointing to sensitive paths, submodules with file:///ext::/fd:: URLs and `update = !command`, tampered metadata and suspicious remotes, and encoding evasion tricks (Cyrillic homoglyphs, null bytes, 100k-char values, binary content in config).
+
+See `test/setup_fixture.sh` for the full breakdown.
+
 # Output formats
 
 - text to console (always unless --quiet)
