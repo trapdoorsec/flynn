@@ -22,6 +22,8 @@ mod output;
 mod arguments;
 mod finding;
 mod scanner;
+use std::path::PathBuf;
+
 use arguments::Args;
 use clap::Parser;
 
@@ -54,10 +56,44 @@ fn banner() -> String {
     .to_string()
 }
 
+fn resolve_git_dir(path: &PathBuf) -> anyhow::Result<PathBuf> {
+    if !path.exists() {
+        anyhow::bail!(
+            "git repo path does not exist. Make sure you point to the repository root for best results. {}",
+            path.display()
+        );
+    }
+
+    if !path.is_dir() {
+        anyhow::bail!(
+            "git repo path is not a directory. Make sure you point to the repository root for best results. {}",
+            path.display()
+        );
+    }
+
+    if path.ends_with(".git") {
+        Ok(path.clone())
+    } else {
+        let git_dir = path.join(".git");
+        if git_dir.exists() && git_dir.is_dir() {
+            Ok(git_dir)
+        } else {
+            anyhow::bail!("no .git directory found in: {}", path.display());
+        }
+    }
+}
+
+fn resolve_output_file(output: &PathBuf) -> _ {
+    todo!()
+}
+
 fn main() {
     let args = Args::parse();
     if !args.quiet {
         println!("{}", banner());
     }
+    let git_dir = resolve_git_dir(&args.path);
+    let output_file = resolve_output_file(&args.output);
+
     println!("{:?}", args)
 }
