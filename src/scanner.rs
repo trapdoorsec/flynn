@@ -7,6 +7,7 @@ use crate::checks::{
 use crate::finding::Finding;
 use crate::safeprint;
 use gix::date;
+use gix::traverse::commit::find;
 use owo_colors::OwoColorize;
 use std::path::Path;
 use std::path::PathBuf;
@@ -31,7 +32,7 @@ pub fn scan(
     let mut findings = Vec::new();
 
     let report_finished = format!(
-        "{}\t:\t{}",
+        "\n{}\t:\t{}\n======================\nFINDINGS\n======================\n",
         "scan started".cyan(),
         date::Time::now_local_or_utc()
     );
@@ -44,8 +45,18 @@ pub fn scan(
             }
         }
     }
+    for finding in findings {
+        let sev = match finding.severity {
+            Severity::Info => format!("{:?}", finding.severity.blue()),
+            Severity::Medium => format!("{:?}", finding.severity.yellow()),
+            Severity::High => format!("{:?}", finding.severity.red()),
+            Severity::Critical => format!("{:?}", finding.severity.purple()),
+        };
+        let message = format!("{}: {} - {}", sev, finding.name, finding.reason);
+        safeprint(quiet, message.as_str());
+    }
     let report_finished = format!(
-        "{}\t:\t{}",
+        "\n======================\n{}\t:\t{}",
         "scan completed".cyan(),
         date::Time::now_local_or_utc()
     );
