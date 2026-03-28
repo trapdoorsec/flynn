@@ -37,7 +37,7 @@ pub enum OutputFormat {
     Sarif,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum, serde::Serialize)]
 pub enum Severity {
     Info,
     Medium,

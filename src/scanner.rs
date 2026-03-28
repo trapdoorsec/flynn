@@ -5,9 +5,9 @@ use crate::checks::{
     structure::check_buried_bare_repo,
 };
 use crate::finding::Finding;
+use crate::output;
 use crate::safeprint;
 use gix::date;
-use gix::traverse::commit::find;
 use owo_colors::OwoColorize;
 use std::path::Path;
 use std::path::PathBuf;
@@ -23,7 +23,7 @@ const CHECKS: &[CheckFn] = &[
 
 pub fn scan(
     path: &PathBuf,
-    output: &PathBuf,
+    output_path: &PathBuf,
     min_sev: Severity,
     fail_on: Option<Severity>,
     format: OutputFormat,
@@ -31,35 +31,49 @@ pub fn scan(
 ) -> anyhow::Result<()> {
     let mut findings = Vec::new();
 
-    let report_finished = format!(
-        "\n{}\t:\t{}\n======================\nFINDINGS\n======================\n",
-        "scan started".cyan(),
-        date::Time::now_local_or_utc()
+    safeprint(
+        quiet,
+        &format!(
+            "\n{}\t:\t{}",
+            "scan started".cyan(),
+            date::Time::now_local_or_utc()
+        ),
     );
-    safeprint(quiet, report_finished.as_str());
+
     for check in CHECKS {
         match check(path) {
             Ok(mut results) => findings.append(&mut results),
             Err(e) => {
-                eprintln!("{}: check failed {}", "warning".yellow(), e);
+                eprintln!("{}: check failed: {}", "warning".yellow(), e);
             }
         }
     }
-    for finding in findings {
-        let sev = match finding.severity {
-            Severity::Info => format!("{:?}", finding.severity.blue()),
-            Severity::Medium => format!("{:?}", finding.severity.yellow()),
-            Severity::High => format!("{:?}", finding.severity.red()),
-            Severity::Critical => format!("{:?}", finding.severity.purple()),
-        };
-        let message = format!("{}: {} - {}", sev, finding.name, finding.reason);
-        safeprint(quiet, message.as_str());
+
+    findings.retain(|f| f.severity >= min_sev);
+    findings.sort_by(|a, b| b.severity.cmp(&a.severity));
+
+    if !quiet {
+        let console = output::text::print_text(&findings);
+        println!("\n{}\n", console);
     }
-    let report_finished = format!(
-        "\n======================\n{}\t:\t{}",
-        "scan completed".cyan(),
-        date::Time::now_local_or_utc()
+
+    output::write_report(&findings, output_path, &format)?;
+    safeprint(
+        quiet,
+        &format!(
+            "{} written to {}\n{}\t:\t{}",
+            "report".cyan(),
+            output_path.display(),
+            "scan completed".cyan(),
+            date::Time::now_local_or_utc()
+        ),
     );
-    safeprint(quiet, report_finished.as_str());
+
+    if let Some(threshold) = fail_on {
+        if findings.iter().any(|f| f.severity >= threshold) {
+            std::process::exit(2);
+        }
+    }
+
     Ok(())
 }
