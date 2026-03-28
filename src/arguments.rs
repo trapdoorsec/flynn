@@ -20,7 +20,7 @@ pub struct Args {
     #[arg(short, long, value_name = "LEVEL", default_value = "info")]
     pub min_severity: Severity,
 
-    #[arg(short, long, value_name = "LEVEL")]
+    #[arg(long, value_name = "LEVEL")]
     pub fail_on: Option<Severity>,
 
     #[arg(short, long, value_name = "FILE")]

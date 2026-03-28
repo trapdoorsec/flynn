@@ -19,10 +19,18 @@
 mod checks;
 mod output;
 
+mod arguments;
 mod finding;
 mod scanner;
-mod arguments;
-use clap::Parser
+use arguments::Args;
+use clap::Parser;
+
+fn banner() -> String {
+    "this is a banner".to_string()
+}
+
 fn main() {
- 
+    let args = Args::parse();
+    println!("{}", banner());
+    println!("{:?}", args)
 }
