@@ -22,11 +22,14 @@ mod output;
 mod arguments;
 mod finding;
 mod scanner;
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 
+use anyhow::Context;
 use arguments::Args;
 use clap::Parser;
+use owo_colors::OwoColorize;
 
+use crate::scanner::scan;
 fn banner() -> String {
     r#"
 
@@ -83,17 +86,58 @@ fn resolve_git_dir(path: &PathBuf) -> anyhow::Result<PathBuf> {
     }
 }
 
-fn resolve_output_file(output: &PathBuf) -> _ {
-    todo!()
+fn resolve_output_file(output: &PathBuf) -> anyhow::Result<PathBuf> {
+    let parent = output
+        .parent()
+        .context("output path has no parent directory")?;
+    let filename = output.file_name().context("no filename for output")?;
+    let filename_str = filename.to_string_lossy();
+
+    if parent != std::path::Path::new("") && !parent.exists() {
+        anyhow::bail!("output directory does not exist: {}", parent.display());
+    }
+
+    if filename_str.starts_with('.') && filename_str.chars().all(|c| c == '.') {
+        anyhow::bail!("output filename is not valid: {}", filename_str);
+    }
+
+    Ok(output.to_path_buf())
+}
+fn safeprint(quiet: bool, string: String) {
+    if !quiet {
+        println!("{}", string)
+    }
 }
 
-fn main() {
+fn run() -> anyhow::Result<()> {
     let args = Args::parse();
-    if !args.quiet {
-        println!("{}", banner());
-    }
+    safeprint(args.quiet, banner());
+
     let git_dir = resolve_git_dir(&args.path);
     let output_file = resolve_output_file(&args.output);
 
-    println!("{:?}", args)
+    let arg_list = format!("{:?}", args);
+    safeprint(args.quiet, arg_list);
+
+    let report = scan(
+        &git_dir?,
+        &output_file?,
+        args.min_severity,
+        args.fail_on,
+        args.format,
+        args.quiet,
+    );
+    Ok(())
+}
+
+fn main() {
+    if let Err(e) = run() {
+        eprintln!("{}: {}", "error".red(), e);
+
+        for cause in e.chain().skip(1) {
+            eprintln!("\tcaused by: {}", cause)
+        }
+
+        std::process::exit(1);
+    }
 }

@@ -23,7 +23,7 @@ pub struct Args {
     #[arg(long, value_name = "LEVEL")]
     pub fail_on: Option<Severity>,
 
-    #[arg(short, long, value_name = "FILE")]
+    #[arg(short, long, value_name = "FILE", default_value = "flynn_output.txt")]
     pub output: PathBuf,
 
     #[arg(short, long, default_value_t = false)]
