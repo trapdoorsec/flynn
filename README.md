@@ -1,2 +1,2 @@
 # flynn
-Find indicators of weaponized git repositories in your pipeline
+Find indicators of weaponized git repositories
