@@ -115,8 +115,21 @@ fn run() -> anyhow::Result<()> {
     let git_dir = resolve_git_dir(&args.path)?;
     let output_file = resolve_output_file(&args.output)?;
 
-    let arg_list = format!("{:?}", args);
-    safeprint(args.quiet, arg_list.as_str());
+    let fail_on_str = match &args.fail_on {
+        Some(s) => format!("{:?}", s),
+        None => "—".to_string(),
+    };
+    let mut config_table = comfy_table::Table::new();
+    config_table
+        .load_preset(comfy_table::presets::UTF8_FULL)
+        .set_content_arrangement(comfy_table::ContentArrangement::Dynamic)
+        .set_header(vec!["Option", "Value"])
+        .add_row(vec!["target", &git_dir.display().to_string()])
+        .add_row(vec!["format", &format!("{:?}", args.format)])
+        .add_row(vec!["min severity", &format!("{:?}", args.min_severity)])
+        .add_row(vec!["fail on", &fail_on_str])
+        .add_row(vec!["output", &output_file.display().to_string()]);
+    safeprint(args.quiet, &config_table.to_string());
 
     let report = scan(
         &git_dir,
