@@ -58,12 +58,19 @@ pub fn scan(
     }
 
     output::write_report(&findings, output_path, &format)?;
+    let abs_output = std::fs::canonicalize(output_path).unwrap_or_else(|_| output_path.clone());
+    let format_label = match format {
+        OutputFormat::Text => "text",
+        OutputFormat::Json => "json",
+        OutputFormat::Sarif => "sarif",
+    };
     safeprint(
         quiet,
         &format!(
-            "{} written to {}\n{}\t:\t{}",
+            "{} ({}) written to {}\n{}\t:\t{}",
             "report".cyan(),
-            output_path.display(),
+            format_label,
+            abs_output.display(),
             "scan completed".cyan(),
             date::Time::now_local_or_utc()
         ),
