@@ -109,7 +109,8 @@ fn safeprint(quiet: bool, string: &str) {
 
 fn run() -> anyhow::Result<()> {
     let args = Args::parse();
-    safeprint(args.quiet, BANNER);
+    let banner = format!("{}", BANNER.cyan());
+    safeprint(args.quiet, banner.as_str());
 
     let git_dir = resolve_git_dir(&args.path)?;
     let output_file = resolve_output_file(&args.output)?;

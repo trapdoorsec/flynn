@@ -5,6 +5,8 @@ use crate::checks::{
     structure::check_buried_bare_repo,
 };
 use crate::finding::Finding;
+use crate::safeprint;
+use gix::date;
 use owo_colors::OwoColorize;
 use std::path::Path;
 use std::path::PathBuf;
@@ -28,6 +30,12 @@ pub fn scan(
 ) -> anyhow::Result<()> {
     let mut findings = Vec::new();
 
+    let report_finished = format!(
+        "{}\t:\t{}",
+        "scan started".cyan(),
+        date::Time::now_local_or_utc()
+    );
+    safeprint(quiet, report_finished.as_str());
     for check in CHECKS {
         match check(path) {
             Ok(mut results) => findings.append(&mut results),
@@ -36,5 +44,11 @@ pub fn scan(
             }
         }
     }
+    let report_finished = format!(
+        "{}\t:\t{}",
+        "scan completed".cyan(),
+        date::Time::now_local_or_utc()
+    );
+    safeprint(quiet, report_finished.as_str());
     Ok(())
 }
