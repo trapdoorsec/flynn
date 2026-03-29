@@ -65,7 +65,7 @@ flynn -q -f json -o results.json /path/to/repo
 - weed out false postitives and negatives
 - integration testing with GH actions
 - examples for use in GH automations
-- move documentation content into a wiki
+- move documentation content into a wiki and provide URLs for further finding analysis
 
 # checks
 ## config-based command execution
