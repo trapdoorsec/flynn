@@ -1,10 +1,20 @@
+
 # flynn
+
+> note: this is a work in progress, I am currently in the process of validating this project to weed out false negatives and positives. Please wait until version 1.0.0 before using this in a build pipeline
 
 - Find indicators of weaponized git repositories
 - Able to be plugged into a CI/CD pipeline
 - Or run as a command line tool. 
 - SARIF output supported
 - Risk scoring: `INFO, MEDIUM, HIGH, CRITICAL`
+
+# Todo
+
+- weed out false postitives and negatives
+- integration testing with GH actions
+- examples for use in GH automations
+- move documentation content into a wiki
 
 # checks
 ## config-based command execution
