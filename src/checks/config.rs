@@ -1,24 +1,191 @@
+use std::fs;
 use std::path::Path;
 
+use crate::arguments::Severity;
 use crate::finding::Finding;
 
-// all config key checks (fsmonitor, sshCommand, etc)
-pub fn check_fsmonitor(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
-    let test_finding = Finding {
-        name: "Test Finding".to_string(),
-        severity: crate::arguments::Severity::Info,
-        reason: "Testing".to_string(),
+fn dangerous_config_match(section: &str, key: &str, value: &str) -> Option<Finding> {
+    let (name, severity) = match (section, key) {
+        ("core", "fsmonitor") | ("core", "fsmonitorv2") => ("core.fsmonitor", Severity::Critical),
+        ("core", "sshcommand") => ("core.sshCommand", Severity::Critical),
+        ("core", "gitproxy") => ("core.gitProxy", Severity::Critical),
+        ("core", "editor") => ("core.editor", Severity::High),
+        ("core", "pager") => ("core.pager", Severity::High),
+        ("core", "hookspath") => ("core.hooksPath", Severity::Critical),
+        ("sequence", "editor") => ("sequence.editor", Severity::High),
+        ("diff", "external") => ("diff.external", Severity::High),
+        ("credential", "helper") => ("credential.helper", Severity::Critical),
+        ("gpg", "program") => ("gpg.program", Severity::High),
+        ("receive", "procreceive") => ("receive.procReceive", Severity::Critical),
+        ("uploadpack", "packobjectshook") => ("uploadpack.packObjectsHook", Severity::Critical),
+        ("web", "browser") => ("web.browser", Severity::High),
+        ("sendemail", "smtpserver") => ("sendemail.smtpserver", Severity::High),
+        ("transfer", "fsckobjects") => ("transfer.fsckObjects", Severity::Medium),
+        _ => return None,
     };
-    Ok(vec![test_finding])
+    Some(Finding {
+        severity,
+        name: name.to_string(),
+        reason: format!("{} = {}", name, value),
+    })
+}
+
+fn parse_section_header(line: &str) -> Option<(String, Option<String>)> {
+    let trimmed = line.trim();
+    if !trimmed.starts_with('[') {
+        return None;
+    }
+    let end = trimmed.rfind(']')?;
+    let header = &trimmed[1..end];
+    if let Some(quote_start) = header.find('"') {
+        let section = header[..quote_start].trim().to_lowercase();
+        let sub = header[quote_start + 1..].trim_end_matches('"').to_string();
+        Some((section, Some(sub)))
+    } else {
+        Some((header.trim().to_lowercase(), None))
+    }
+}
+
+pub fn check_fsmonitor(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
+    let config_path = git_dir.join("config");
+    let content = match fs::read(&config_path) {
+        Ok(bytes) => String::from_utf8_lossy(&bytes).to_string(),
+        Err(_) => return Ok(vec![]),
+    };
+
+    let mut findings = Vec::new();
+    let mut section = String::new();
+    let mut subsection: Option<String> = None;
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+
+        if let Some((s, sub)) = parse_section_header(line) {
+            section = s;
+            subsection = sub;
+            continue;
+        }
+
+        if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with(';') {
+            continue;
+        }
+
+        if let Some(eq_pos) = trimmed.find('=') {
+            let key = trimmed[..eq_pos].trim().to_lowercase();
+            let value = trimmed[eq_pos + 1..].trim();
+
+            // Simple section.key matches (no subsection required)
+            if subsection.is_none() {
+                if let Some(finding) = dangerous_config_match(&section, &key, value) {
+                    findings.push(finding);
+                }
+            }
+
+            // Subsection-based matches
+            if let Some(ref sub) = subsection {
+                if section == "difftool" && key == "cmd" {
+                    findings.push(Finding {
+                        severity: Severity::High,
+                        name: "difftool.cmd".to_string(),
+                        reason: format!("difftool.{}.cmd = {}", sub, value),
+                    });
+                }
+                if section == "mergetool" && key == "cmd" {
+                    findings.push(Finding {
+                        severity: Severity::High,
+                        name: "mergetool.cmd".to_string(),
+                        reason: format!("mergetool.{}.cmd = {}", sub, value),
+                    });
+                }
+                if section == "gpg" && key == "program" {
+                    let sub_lower = sub.to_lowercase();
+                    if sub_lower == "ssh" {
+                        findings.push(Finding {
+                            severity: Severity::High,
+                            name: "gpg.ssh.program".to_string(),
+                            reason: format!("gpg.ssh.program = {}", value),
+                        });
+                    } else if sub_lower == "x509" {
+                        findings.push(Finding {
+                            severity: Severity::High,
+                            name: "gpg.x509.program".to_string(),
+                            reason: format!("gpg.x509.program = {}", value),
+                        });
+                    }
+                }
+                if section == "includeif" && key == "path" {
+                    findings.push(Finding {
+                        severity: Severity::Critical,
+                        name: "includeIf.path".to_string(),
+                        reason: format!("includeIf conditional include: {}", value),
+                    });
+                }
+            }
+
+            // pager.* (any key under [pager] section)
+            if section == "pager" && subsection.is_none() {
+                findings.push(Finding {
+                    severity: Severity::High,
+                    name: format!("pager.{}", key),
+                    reason: format!("pager.{} = {}", key, value),
+                });
+            }
+
+            // filter.*.{clean,smudge,process}
+            if section == "filter" {
+                if key == "clean" || key == "smudge" || key == "process" {
+                    findings.push(Finding {
+                        severity: Severity::Critical,
+                        name: format!("filter.{}", key),
+                        reason: format!("filter {} = {}", key, value),
+                    });
+                }
+            }
+
+            // include.path (no subsection)
+            if section == "include" && subsection.is_none() && key == "path" {
+                findings.push(Finding {
+                    severity: Severity::Critical,
+                    name: "include.path".to_string(),
+                    reason: format!("include.path = {}", value),
+                });
+            }
+        }
+    }
+
+    Ok(findings)
 }
 
 pub fn check_ssh_command(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
-    let test_finding = Finding {
-        name: "Test Finding".to_string(),
-        severity: crate::arguments::Severity::Critical,
-        reason: "Testing".to_string(),
+    let config_path = git_dir.join("config");
+    let content = match fs::read(&config_path) {
+        Ok(bytes) => String::from_utf8_lossy(&bytes).to_string(),
+        Err(_) => return Ok(vec![]),
     };
-    Ok(vec![test_finding])
+
+    let mut findings = Vec::new();
+    let mut section = String::new();
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if let Some((s, _)) = parse_section_header(line) {
+            section = s;
+            continue;
+        }
+        if let Some(eq_pos) = trimmed.find('=') {
+            let key = trimmed[..eq_pos].trim().to_lowercase();
+            let value = trimmed[eq_pos + 1..].trim();
+            if section == "core" && key == "sshcommand" {
+                findings.push(Finding {
+                    severity: Severity::Critical,
+                    name: "core.sshCommand".to_string(),
+                    reason: format!("core.sshCommand = {}", value),
+                });
+            }
+        }
+    }
+
+    Ok(findings)
 }
 
 #[cfg(test)]

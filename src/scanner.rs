@@ -1,8 +1,15 @@
 use crate::arguments::{OutputFormat, Severity};
 use crate::checks::{
+    attributes::check_attributes,
     config::{check_fsmonitor, check_ssh_command},
+    encoding::check_encoding_evasion,
     hooks::check_executable_hooks,
+    metadata::check_metadata,
+    objects::check_objects,
+    refs::check_refs,
     structure::check_buried_bare_repo,
+    submodules::check_submodules,
+    worktrees::check_worktrees,
 };
 use crate::finding::Finding;
 use crate::output;
@@ -19,6 +26,13 @@ const CHECKS: &[CheckFn] = &[
     check_ssh_command,
     check_buried_bare_repo,
     check_executable_hooks,
+    check_objects,
+    check_refs,
+    check_attributes,
+    check_worktrees,
+    check_submodules,
+    check_metadata,
+    check_encoding_evasion,
 ];
 
 pub fn scan(

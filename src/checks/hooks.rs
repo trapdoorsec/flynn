@@ -1,9 +1,88 @@
+use std::fs;
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
+use crate::arguments::Severity;
 use crate::finding::Finding;
 
 pub fn check_executable_hooks(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
-    Ok(vec![])
+    let hooks_dir = git_dir.join("hooks");
+    if !hooks_dir.is_dir() {
+        return Ok(vec![]);
+    }
+
+    let mut findings = Vec::new();
+
+    for entry in fs::read_dir(&hooks_dir)? {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        let file_name = entry.file_name().to_string_lossy().to_string();
+
+        if file_name.ends_with(".sample") {
+            continue;
+        }
+
+        let path = entry.path();
+        let symlink_meta = match fs::symlink_metadata(&path) {
+            Ok(m) => m,
+            Err(_) => continue,
+        };
+
+        if symlink_meta.file_type().is_dir() {
+            continue;
+        }
+
+        // Basic finding: non-.sample hook present
+        findings.push(Finding {
+            severity: Severity::High,
+            name: format!("hook: {}", file_name),
+            reason: format!("executable hook found: {}", file_name),
+        });
+
+        // Symlink detection
+        if symlink_meta.file_type().is_symlink() {
+            let target = fs::read_link(&path).unwrap_or_default();
+            findings.push(Finding {
+                severity: Severity::Critical,
+                name: format!("hook symlink: {}", file_name),
+                reason: format!("hook {} is a symlink pointing to {}", file_name, target.display()),
+            });
+            continue;
+        }
+
+        // World-writable check
+        let mode = symlink_meta.permissions().mode();
+        if mode & 0o002 != 0 {
+            findings.push(Finding {
+                severity: Severity::High,
+                name: format!("world-writable hook: {}", file_name),
+                reason: format!("hook {} is world-writable (mode {:04o})", file_name, mode & 0o7777),
+            });
+        }
+
+        // Unusual shebang check
+        if let Ok(content) = fs::read_to_string(&path) {
+            if let Some(first_line) = content.lines().next() {
+                if first_line.starts_with("#!") {
+                    let shebang_lower = first_line.to_lowercase();
+                    for lang in &["python", "node", "perl", "ruby", "php"] {
+                        if shebang_lower.contains(lang) {
+                            findings.push(Finding {
+                                severity: Severity::Medium,
+                                name: format!("unusual shebang: {}", file_name),
+                                reason: format!("hook {} has {} shebang: {}", file_name, lang, first_line),
+                            });
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(findings)
 }
 
 #[cfg(test)]

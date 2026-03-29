@@ -1,9 +1,109 @@
+use std::fs;
 use std::path::Path;
 
+use crate::arguments::Severity;
 use crate::finding::Finding;
 
 pub fn check_encoding_evasion(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
-    Ok(vec![])
+    let mut findings = Vec::new();
+    let config_path = git_dir.join("config");
+
+    let bytes = match fs::read(&config_path) {
+        Ok(b) => b,
+        Err(_) => return Ok(vec![]),
+    };
+
+    // Null bytes
+    if bytes.contains(&0) {
+        findings.push(Finding {
+            severity: Severity::High,
+            name: "null bytes in config".to_string(),
+            reason: "config file contains null (\\x00) bytes".to_string(),
+        });
+    }
+
+    // Binary content (control chars that shouldn't appear in text config)
+    let has_binary = bytes.iter().any(|&b| b < 0x09 || (b > 0x0d && b < 0x20 && b != 0x1b));
+    if has_binary {
+        findings.push(Finding {
+            severity: Severity::High,
+            name: "binary content in config".to_string(),
+            reason: "config file contains binary/non-text content".to_string(),
+        });
+    }
+
+    let content = String::from_utf8_lossy(&bytes);
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+
+        // Homoglyphs in section headers
+        if trimmed.starts_with('[') {
+            if let Some(end) = trimmed.rfind(']') {
+                let header = &trimmed[1..end];
+                let section_name = header.split('"').next().unwrap_or("").trim();
+                if section_name.chars().any(|c| !c.is_ascii()) {
+                    findings.push(Finding {
+                        severity: Severity::Critical,
+                        name: "homoglyph in config section".to_string(),
+                        reason: format!(
+                            "config section [{}] contains non-ASCII/unicode characters (possible cyrillic homoglyph attack)",
+                            section_name
+                        ),
+                    });
+                }
+            }
+            continue;
+        }
+
+        if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with(';') {
+            continue;
+        }
+
+        // Tab indentation tricks (mixed tabs/spaces or multiple tabs before key)
+        if trimmed.contains('=') {
+            let leading = &line[..line.len() - line.trim_start().len()];
+            let tab_count = leading.chars().filter(|c| *c == '\t').count();
+            let space_count = leading.chars().filter(|c| *c == ' ').count();
+            if leading.len() > 1 && (tab_count > 1 || (tab_count > 0 && space_count > 0)) {
+                findings.push(Finding {
+                    severity: Severity::High,
+                    name: "tab indentation trick".to_string(),
+                    reason: format!("config key with unusual whitespace indentation: {}", trimmed),
+                });
+            }
+        }
+
+        // Long values and shell metacharacters
+        if let Some(eq_pos) = trimmed.find('=') {
+            let value = &trimmed[eq_pos + 1..];
+
+            if value.len() > 10_000 {
+                findings.push(Finding {
+                    severity: Severity::Medium,
+                    name: "oversized config value".to_string(),
+                    reason: format!(
+                        "config value is {} chars long (possible buffer overflow attempt)",
+                        value.len()
+                    ),
+                });
+            }
+
+            let value_trimmed = value.trim();
+            if value_trimmed.contains("$(") || value_trimmed.contains('`') {
+                findings.push(Finding {
+                    severity: Severity::High,
+                    name: "shell metacharacters in config".to_string(),
+                    reason: format!(
+                        "config value contains shell metacharacters: {}",
+                        &value_trimmed[..value_trimmed.len().min(100)]
+                    ),
+                });
+            }
+        }
+    }
+
+    Ok(findings)
 }
 
 #[cfg(test)]

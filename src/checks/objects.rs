@@ -1,9 +1,100 @@
+use std::fs;
 use std::path::Path;
 
+use crate::arguments::Severity;
 use crate::finding::Finding;
 
 pub fn check_objects(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
-    Ok(vec![])
+    let mut findings = Vec::new();
+    let objects_dir = git_dir.join("objects");
+
+    // Oversized loose objects (2-char hex dirs containing large files)
+    if objects_dir.is_dir() {
+        for entry in fs::read_dir(&objects_dir).into_iter().flatten().flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.len() == 2 && name.chars().all(|c| c.is_ascii_hexdigit()) && entry.path().is_dir() {
+                for obj in fs::read_dir(entry.path()).into_iter().flatten().flatten() {
+                    if let Ok(meta) = obj.metadata() {
+                        if meta.len() > 1_000_000 {
+                            findings.push(Finding {
+                                severity: Severity::High,
+                                name: "oversized loose object".to_string(),
+                                reason: format!(
+                                    "loose object {}/{} is {}KB",
+                                    name,
+                                    obj.file_name().to_string_lossy(),
+                                    meta.len() / 1024
+                                ),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Oversized pack files
+    let pack_dir = objects_dir.join("pack");
+    if pack_dir.is_dir() {
+        for entry in fs::read_dir(&pack_dir).into_iter().flatten().flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.ends_with(".pack") {
+                if let Ok(meta) = entry.metadata() {
+                    if meta.len() > 1_000_000 {
+                        findings.push(Finding {
+                            severity: Severity::High,
+                            name: "oversized pack file".to_string(),
+                            reason: format!("pack file {} is {}KB", name, meta.len() / 1024),
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    // Oversized index file
+    let index_path = git_dir.join("index");
+    if let Ok(meta) = fs::metadata(&index_path) {
+        if meta.len() > 100_000 {
+            findings.push(Finding {
+                severity: Severity::Medium,
+                name: "oversized index".to_string(),
+                reason: format!(".git/index is {}KB (possibly crafted)", meta.len() / 1024),
+            });
+        }
+    }
+
+    // alternates file
+    let alternates = objects_dir.join("info").join("alternates");
+    if let Ok(content) = fs::read_to_string(&alternates) {
+        for line in content.lines() {
+            let line = line.trim();
+            if !line.is_empty() && !line.starts_with('#') {
+                findings.push(Finding {
+                    severity: Severity::Critical,
+                    name: "alternates".to_string(),
+                    reason: format!("alternates points to external path: {}", line),
+                });
+            }
+        }
+    }
+
+    // http-alternates file
+    let http_alt = objects_dir.join("info").join("http-alternates");
+    if let Ok(content) = fs::read_to_string(&http_alt) {
+        for line in content.lines() {
+            let line = line.trim();
+            if !line.is_empty() && !line.starts_with('#') {
+                findings.push(Finding {
+                    severity: Severity::Critical,
+                    name: "http-alternates".to_string(),
+                    reason: format!("http-alternates references remote: {}", line),
+                });
+            }
+        }
+    }
+
+    Ok(findings)
 }
 
 #[cfg(test)]

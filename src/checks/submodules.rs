@@ -1,9 +1,138 @@
+use std::fs;
 use std::path::Path;
 
+use crate::arguments::Severity;
 use crate::finding::Finding;
 
 pub fn check_submodules(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
-    Ok(vec![])
+    let mut findings = Vec::new();
+    let repo_root = git_dir.parent().unwrap_or(git_dir);
+
+    // Parse .gitmodules
+    let gitmodules = repo_root.join(".gitmodules");
+    if let Ok(content) = fs::read_to_string(&gitmodules) {
+        for line in content.lines() {
+            let trimmed = line.trim();
+            if let Some(eq_pos) = trimmed.find('=') {
+                let key = trimmed[..eq_pos].trim().to_lowercase();
+                let value = trimmed[eq_pos + 1..].trim();
+
+                match key.as_str() {
+                    "url" => {
+                        if value.starts_with("file://") {
+                            findings.push(Finding {
+                                severity: Severity::High,
+                                name: "submodule file:// URL".to_string(),
+                                reason: format!("submodule URL uses file:// scheme: {}", value),
+                            });
+                        }
+                        if value.starts_with("ext::") {
+                            findings.push(Finding {
+                                severity: Severity::Critical,
+                                name: "submodule ext:: URL".to_string(),
+                                reason: format!("submodule URL uses ext:: protocol: {}", value),
+                            });
+                        }
+                        if value.starts_with("fd::") {
+                            findings.push(Finding {
+                                severity: Severity::High,
+                                name: "submodule fd:: URL".to_string(),
+                                reason: format!("submodule URL uses fd:: protocol: {}", value),
+                            });
+                        }
+                    }
+                    "update" => {
+                        if value.starts_with('!') {
+                            findings.push(Finding {
+                                severity: Severity::Critical,
+                                name: "submodule update command".to_string(),
+                                reason: format!("submodule update = !command: {}", value),
+                            });
+                        }
+                    }
+                    "path" => {
+                        if value.contains("..") {
+                            findings.push(Finding {
+                                severity: Severity::Critical,
+                                name: "submodule path traversal".to_string(),
+                                reason: format!("submodule path contains .. components: {}", value),
+                            });
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    // Check .git/modules/ for nested malicious repos
+    let modules_dir = git_dir.join("modules");
+    if modules_dir.is_dir() {
+        for entry in fs::read_dir(&modules_dir).into_iter().flatten().flatten() {
+            if !entry.path().is_dir() {
+                continue;
+            }
+
+            let name = entry.file_name().to_string_lossy().to_string();
+            let module_dir = entry.path();
+
+            // Check nested config for dangerous keys
+            if let Ok(config) = fs::read_to_string(module_dir.join("config")) {
+                let mut section = String::new();
+
+                for line in config.lines() {
+                    let trimmed = line.trim();
+                    if trimmed.starts_with('[') {
+                        if let Some(end) = trimmed.rfind(']') {
+                            section = trimmed[1..end].split('"').next().unwrap_or("").trim().to_lowercase();
+                        }
+                        continue;
+                    }
+                    if let Some(eq_pos) = trimmed.find('=') {
+                        let key = trimmed[..eq_pos].trim().to_lowercase();
+                        let value = trimmed[eq_pos + 1..].trim();
+
+                        let dangerous_keys = ["fsmonitor", "sshcommand", "hookspath", "editor"];
+                        if dangerous_keys.contains(&key.as_str()) {
+                            findings.push(Finding {
+                                severity: Severity::Critical,
+                                name: format!("nested modules config: {}", name),
+                                reason: format!("nested module {} has dangerous config: {} = {}", name, key, value),
+                            });
+                        }
+
+                        if section.starts_with("remote") && key == "url" {
+                            if value.starts_with("ext::") || value.starts_with("fd::") {
+                                findings.push(Finding {
+                                    severity: Severity::Critical,
+                                    name: format!("nested modules config: {}", name),
+                                    reason: format!("nested module {} has dangerous remote URL: {}", name, value),
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Check nested hooks
+            let hooks_dir = module_dir.join("hooks");
+            if hooks_dir.is_dir() {
+                for hook_entry in fs::read_dir(&hooks_dir).into_iter().flatten().flatten() {
+                    let hook_name = hook_entry.file_name().to_string_lossy().to_string();
+                    if hook_name.ends_with(".sample") {
+                        continue;
+                    }
+                    findings.push(Finding {
+                        severity: Severity::Critical,
+                        name: format!("nested module hook: {}", hook_name),
+                        reason: format!("nested module {} has hook: {}", name, hook_name),
+                    });
+                }
+            }
+        }
+    }
+
+    Ok(findings)
 }
 
 #[cfg(test)]

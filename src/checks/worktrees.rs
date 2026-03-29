@@ -1,9 +1,60 @@
+use std::fs;
 use std::path::Path;
 
+use crate::arguments::Severity;
 use crate::finding::Finding;
 
 pub fn check_worktrees(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
-    Ok(vec![])
+    let mut findings = Vec::new();
+    let worktrees_dir = git_dir.join("worktrees");
+
+    if !worktrees_dir.is_dir() {
+        return Ok(vec![]);
+    }
+
+    for entry in fs::read_dir(&worktrees_dir)? {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        if !entry.path().is_dir() {
+            continue;
+        }
+
+        let name = entry.file_name().to_string_lossy().to_string();
+
+        findings.push(Finding {
+            severity: Severity::Medium,
+            name: format!("worktree: {}", name),
+            reason: format!("worktree entry found: {}", name),
+        });
+
+        // Check gitdir file for sensitive paths
+        let gitdir_path = entry.path().join("gitdir");
+        if let Ok(content) = fs::read_to_string(&gitdir_path) {
+            let target = content.trim();
+            if target.starts_with('/') || target.contains("..") {
+                findings.push(Finding {
+                    severity: Severity::High,
+                    name: format!("worktree gitdir: {}", name),
+                    reason: format!("worktree {} gitdir points to {}", name, target),
+                });
+            }
+        }
+
+        // Check commondir file
+        let commondir_path = entry.path().join("commondir");
+        if let Ok(content) = fs::read_to_string(&commondir_path) {
+            let target = content.trim();
+            findings.push(Finding {
+                severity: Severity::High,
+                name: format!("worktree commondir: {}", name),
+                reason: format!("worktree {} commondir points to {}", name, target),
+            });
+        }
+    }
+
+    Ok(findings)
 }
 
 #[cfg(test)]
