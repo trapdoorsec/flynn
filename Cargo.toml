@@ -2,6 +2,11 @@
 name = "flynn"
 version = "0.1.0"
 edition = "2024"
+description = "Scan .git directories for indicators of weaponization"
+license = "AGPL-3.0"
+repository = "https://github.com/trapdoorsec/flynn"
+keywords = ["git", "security", "scanner", "malware", "ci"]
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 anyhow = "=1.0.102"
