@@ -9,6 +9,57 @@
 - SARIF output supported
 - Risk scoring: `INFO, MEDIUM, HIGH, CRITICAL`
 
+# Installation
+
+Requires Rust 2024 edition (1.85+).
+
+```bash
+git clone https://github.com/trapdoorsec/flynn.git
+cd flynn
+cargo build --release
+```
+
+The release binary is at `target/release/flynn`. Move it to somewhere on your $PATH and then call it.
+
+# Usage
+
+```bash
+# scan a repository
+flynn /path/to/repo
+
+# filter findings by minimum severity
+flynn -m high /path/to/repo
+
+# fail with exit code 2 if any critical findings (useful in CI)
+flynn --fail-on critical /path/to/repo
+
+# JSON output
+flynn -f json -o findings.json /path/to/repo
+
+# SARIF output (for GitHub Code Scanning / CI integrations)
+flynn -f sarif -o findings.sarif /path/to/repo
+
+# suppress console output (only write report file)
+flynn -q -f json -o results.json /path/to/repo
+```
+
+### Options
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-f, --format <FORMAT>` | Output format: `text`, `json`, `sarif` | `text` |
+| `-m, --min-severity <LEVEL>` | Minimum severity to report: `info`, `medium`, `high`, `critical` | `info` |
+| `--fail-on <LEVEL>` | Exit code 2 if any finding meets this severity | _(none)_ |
+| `-o, --output <FILE>` | Report file path | `flynn_output.txt` |
+| `-q, --quiet` | Suppress console output | `false` |
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Scan completed, no findings at `--fail-on` threshold |
+| 2 | Findings met or exceeded `--fail-on` threshold |
+
 # Todo
 
 - weed out false postitives and negatives
