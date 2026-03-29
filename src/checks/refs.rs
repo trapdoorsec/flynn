@@ -18,6 +18,7 @@ pub fn check_refs(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                 severity: Severity::Medium,
                 name: "detached HEAD".to_string(),
                 reason: format!("HEAD contains raw SHA instead of symbolic ref: {}", content),
+                reference: String::new(),
             });
         }
     }
@@ -38,6 +39,7 @@ pub fn check_refs(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                     severity: Severity::Critical,
                     name: "path traversal ref".to_string(),
                     reason: format!("ref with path traversal: {}", path_str),
+                    reference: String::new(),
                 });
             }
 
@@ -48,6 +50,7 @@ pub fn check_refs(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                         severity: Severity::Medium,
                         name: "orphan ref".to_string(),
                         reason: format!("ref {} points to all-zeros (0000000...)", path_str),
+                        reference: String::new(),
                     });
                 }
             }
@@ -68,6 +71,7 @@ pub fn check_refs(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                         severity: Severity::Critical,
                         name: "suspicious packed-refs".to_string(),
                         reason: format!("packed-refs entry with path traversal: {}", ref_name),
+                        reference: String::new(),
                     });
                 }
             }
@@ -81,6 +85,7 @@ pub fn check_refs(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                 severity: Severity::Info,
                 name: state_file.to_string(),
                 reason: format!("{} present (interrupted operation or leftover state)", state_file),
+                reference: String::new(),
             });
         }
     }

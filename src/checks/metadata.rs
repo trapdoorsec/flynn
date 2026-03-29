@@ -20,6 +20,7 @@ pub fn check_metadata(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                 severity: Severity::Medium,
                 name: "sparse-checkout".to_string(),
                 reason: "sparse-checkout contains unusual patterns".to_string(),
+                reference: String::new(),
             });
         }
     }
@@ -39,6 +40,7 @@ pub fn check_metadata(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                 severity: Severity::Medium,
                 name: "info/exclude".to_string(),
                 reason: format!("info/exclude has {} non-comment entries (may be hiding files)", entries.len()),
+                reference: String::new(),
             });
         }
     }
@@ -52,6 +54,7 @@ pub fn check_metadata(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                 severity: Severity::Info,
                 name: "tampered description".to_string(),
                 reason: "description file modified from default".to_string(),
+                reference: String::new(),
             });
         }
     }
@@ -85,6 +88,7 @@ pub fn check_metadata(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                         severity: Severity::Medium,
                         name: "config [user] section".to_string(),
                         reason: "[user] section in local config".to_string(),
+                        reference: String::new(),
                     });
                 }
                 continue;
@@ -102,6 +106,7 @@ pub fn check_metadata(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                                     severity: Severity::Critical,
                                     name: "remote ext:: protocol".to_string(),
                                     reason: format!("remote '{}' uses ext:: URL: {}", remote_name, value),
+                                    reference: String::new(),
                                 });
                             }
                             if value.starts_with("fd::") {
@@ -109,6 +114,7 @@ pub fn check_metadata(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                                     severity: Severity::High,
                                     name: "remote fd:: protocol".to_string(),
                                     reason: format!("remote '{}' uses fd:: URL: {}", remote_name, value),
+                                    reference: String::new(),
                                 });
                             }
                             if value.starts_with("file://") {
@@ -116,6 +122,7 @@ pub fn check_metadata(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                                     severity: Severity::High,
                                     name: "remote file:// protocol".to_string(),
                                     reason: format!("remote '{}' uses file:// URL: {}", remote_name, value),
+                                    reference: String::new(),
                                 });
                             }
                             remote_urls.insert(remote_name.clone(), value.clone());
@@ -139,6 +146,7 @@ pub fn check_metadata(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                             "remote '{}' pushurl ({}) differs from url ({})",
                             remote_name, pushurl, url
                         ),
+                        reference: String::new(),
                     });
                 }
             }

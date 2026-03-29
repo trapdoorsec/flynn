@@ -30,6 +30,7 @@ pub fn check_buried_bare_repo(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                     severity: Severity::Critical,
                     name: "buried bare repo".to_string(),
                     reason: format!("bare repository found at {}", rel.display()),
+                    reference: String::new(),
                 });
 
                 // Check for worktree jailbreak in buried repo config
@@ -42,6 +43,7 @@ pub fn check_buried_bare_repo(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                                 severity: Severity::Critical,
                                 name: "worktree jailbreak".to_string(),
                                 reason: format!("buried repo has core.worktree = {} (potential jailbreak)", val),
+                                reference: String::new(),
                             });
                         }
                     }
@@ -59,6 +61,7 @@ pub fn check_buried_bare_repo(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                         severity: Severity::Critical,
                         name: "gitdir redirect".to_string(),
                         reason: format!("gitdir: redirect pointing to {}", target),
+                        reference: String::new(),
                     });
                 }
             }
@@ -94,6 +97,7 @@ pub fn check_buried_bare_repo(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                             severity: Severity::Critical,
                             name: "external worktree".to_string(),
                             reason: format!("core.worktree points outside repo: {}", value),
+                            reference: String::new(),
                         });
                     }
                 }
@@ -105,6 +109,7 @@ pub fn check_buried_bare_repo(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                 severity: Severity::High,
                 name: "duplicate [core] sections".to_string(),
                 reason: format!("config has multiple [core] sections ({})", core_count),
+                reference: String::new(),
             });
         }
     }
@@ -131,6 +136,7 @@ pub fn check_buried_bare_repo(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                 severity: Severity::High,
                 name: "symlink in .git".to_string(),
                 reason: format!("symlink {} -> {}", entry.file_name().to_string_lossy(), target.display()),
+                reference: String::new(),
             });
         }
 
@@ -141,6 +147,7 @@ pub fn check_buried_bare_repo(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                     severity: Severity::Medium,
                     name: "unexpected .git subdirectory".to_string(),
                     reason: format!("unexpected directory in .git/: {}", name),
+                    reference: String::new(),
                 });
             }
         }

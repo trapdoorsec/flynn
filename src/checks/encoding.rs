@@ -19,6 +19,7 @@ pub fn check_encoding_evasion(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
             severity: Severity::High,
             name: "null bytes in config".to_string(),
             reason: "config file contains null (\\x00) bytes".to_string(),
+            reference: String::new(),
         });
     }
 
@@ -29,6 +30,7 @@ pub fn check_encoding_evasion(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
             severity: Severity::High,
             name: "binary content in config".to_string(),
             reason: "config file contains binary/non-text content".to_string(),
+            reference: String::new(),
         });
     }
 
@@ -50,6 +52,7 @@ pub fn check_encoding_evasion(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                             "config section [{}] contains non-ASCII/unicode characters (possible cyrillic homoglyph attack)",
                             section_name
                         ),
+                        reference: String::new(),
                     });
                 }
             }
@@ -70,6 +73,7 @@ pub fn check_encoding_evasion(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                     severity: Severity::High,
                     name: "tab indentation trick".to_string(),
                     reason: format!("config key with unusual whitespace indentation: {}", trimmed),
+                    reference: String::new(),
                 });
             }
         }
@@ -86,6 +90,7 @@ pub fn check_encoding_evasion(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                         "config value is {} chars long (possible buffer overflow attempt)",
                         value.len()
                     ),
+                    reference: String::new(),
                 });
             }
 
@@ -98,6 +103,7 @@ pub fn check_encoding_evasion(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                         "config value contains shell metacharacters: {}",
                         &value_trimmed[..value_trimmed.len().min(100)]
                     ),
+                    reference: String::new(),
                 });
             }
         }

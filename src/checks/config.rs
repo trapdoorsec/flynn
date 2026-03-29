@@ -27,6 +27,7 @@ fn dangerous_config_match(section: &str, key: &str, value: &str) -> Option<Findi
         severity,
         name: name.to_string(),
         reason: format!("{} = {}", name, value),
+        reference: String::new(),
     })
 }
 
@@ -88,6 +89,7 @@ pub fn check_fsmonitor(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                         severity: Severity::High,
                         name: "difftool.cmd".to_string(),
                         reason: format!("difftool.{}.cmd = {}", sub, value),
+                        reference: String::new(),
                     });
                 }
                 if section == "mergetool" && key == "cmd" {
@@ -95,6 +97,7 @@ pub fn check_fsmonitor(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                         severity: Severity::High,
                         name: "mergetool.cmd".to_string(),
                         reason: format!("mergetool.{}.cmd = {}", sub, value),
+                        reference: String::new(),
                     });
                 }
                 if section == "gpg" && key == "program" {
@@ -104,12 +107,14 @@ pub fn check_fsmonitor(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                             severity: Severity::High,
                             name: "gpg.ssh.program".to_string(),
                             reason: format!("gpg.ssh.program = {}", value),
+                            reference: String::new(),
                         });
                     } else if sub_lower == "x509" {
                         findings.push(Finding {
                             severity: Severity::High,
                             name: "gpg.x509.program".to_string(),
                             reason: format!("gpg.x509.program = {}", value),
+                            reference: String::new(),
                         });
                     }
                 }
@@ -118,6 +123,7 @@ pub fn check_fsmonitor(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                         severity: Severity::Critical,
                         name: "includeIf.path".to_string(),
                         reason: format!("includeIf conditional include: {}", value),
+                        reference: String::new(),
                     });
                 }
             }
@@ -128,6 +134,7 @@ pub fn check_fsmonitor(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                     severity: Severity::High,
                     name: format!("pager.{}", key),
                     reason: format!("pager.{} = {}", key, value),
+                    reference: String::new(),
                 });
             }
 
@@ -138,6 +145,7 @@ pub fn check_fsmonitor(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                         severity: Severity::Critical,
                         name: format!("filter.{}", key),
                         reason: format!("filter {} = {}", key, value),
+                        reference: String::new(),
                     });
                 }
             }
@@ -148,6 +156,7 @@ pub fn check_fsmonitor(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                     severity: Severity::Critical,
                     name: "include.path".to_string(),
                     reason: format!("include.path = {}", value),
+                    reference: String::new(),
                 });
             }
         }
@@ -180,6 +189,7 @@ pub fn check_ssh_command(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                     severity: Severity::Critical,
                     name: "core.sshCommand".to_string(),
                     reason: format!("core.sshCommand = {}", value),
+                    reference: String::new(),
                 });
             }
         }

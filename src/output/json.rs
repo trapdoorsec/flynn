@@ -21,6 +21,7 @@ mod tests {
             severity,
             name: name.to_string(),
             reason: reason.to_string(),
+            reference: String::new(),
         }
     }
 
@@ -120,6 +121,6 @@ mod tests {
     fn no_extra_fields_in_output() {
         let val = write_and_parse(&[make_finding(Severity::Info, "a", "b")]);
         let obj = val.as_array().unwrap()[0].as_object().unwrap();
-        assert_eq!(obj.len(), 3, "finding should have exactly 3 fields: {:?}", obj.keys().collect::<Vec<_>>());
+        assert_eq!(obj.len(), 4, "finding should have exactly 4 fields: {:?}", obj.keys().collect::<Vec<_>>());
     }
 }

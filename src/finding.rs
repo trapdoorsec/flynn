@@ -6,4 +6,5 @@ pub struct Finding {
     pub severity: Severity,
     pub name: String,
     pub reason: String,
+    pub reference: String,
 }

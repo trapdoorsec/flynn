@@ -22,6 +22,7 @@ pub fn check_attributes(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
             severity: Severity::High,
             name: "info/attributes".to_string(),
             reason: "info/attributes exists with filter/diff/merge drivers".to_string(),
+            reference: String::new(),
         });
     }
 
@@ -51,12 +52,14 @@ fn parse_attributes(content: &str, source: &str, findings: &mut Vec<Finding>) {
                     severity: Severity::Critical,
                     name: format!("filter attribute: {}", source),
                     reason: format!("{} on '{}' in {}", attr, pattern, source),
+                    reference: String::new(),
                 });
                 if high_value_patterns.contains(&pattern) {
                     findings.push(Finding {
                         severity: Severity::Critical,
                         name: "high-value filter target".to_string(),
                         reason: format!("{} targets '{}' in {}", attr, pattern, source),
+                        reference: String::new(),
                     });
                 }
             }
@@ -65,6 +68,7 @@ fn parse_attributes(content: &str, source: &str, findings: &mut Vec<Finding>) {
                     severity: Severity::High,
                     name: format!("diff attribute: {}", source),
                     reason: format!("{} on '{}' in {}", attr, pattern, source),
+                    reference: String::new(),
                 });
             }
             if attr.starts_with("merge=") {
@@ -72,6 +76,7 @@ fn parse_attributes(content: &str, source: &str, findings: &mut Vec<Finding>) {
                     severity: Severity::High,
                     name: format!("merge attribute: {}", source),
                     reason: format!("{} on '{}' in {}", attr, pattern, source),
+                    reference: String::new(),
                 });
             }
             if attr.starts_with("eol=") && has_filter {
@@ -79,6 +84,7 @@ fn parse_attributes(content: &str, source: &str, findings: &mut Vec<Finding>) {
                     severity: Severity::High,
                     name: "eol + filter combo".to_string(),
                     reason: format!("eol combined with filter on '{}' in {}", pattern, source),
+                    reference: String::new(),
                 });
             }
             if *attr == "export-subst" {
@@ -86,6 +92,7 @@ fn parse_attributes(content: &str, source: &str, findings: &mut Vec<Finding>) {
                     severity: Severity::Medium,
                     name: "export-subst attribute".to_string(),
                     reason: format!("export-subst on '{}' in {}", pattern, source),
+                    reference: String::new(),
                 });
             }
             if *attr == "ident" {
@@ -93,6 +100,7 @@ fn parse_attributes(content: &str, source: &str, findings: &mut Vec<Finding>) {
                     severity: Severity::Info,
                     name: "ident attribute".to_string(),
                     reason: format!("ident on '{}' in {}", pattern, source),
+                    reference: String::new(),
                 });
             }
         }

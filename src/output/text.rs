@@ -32,6 +32,7 @@ pub fn write_text(findings: &[Finding], output: &Path) -> anyhow::Result<()> {
             Cell::new("Severity"),
             Cell::new("Check"),
             Cell::new("Finding"),
+            Cell::new("Reference"),
         ]);
 
     for finding in findings {
@@ -40,6 +41,7 @@ pub fn write_text(findings: &[Finding], output: &Path) -> anyhow::Result<()> {
             Cell::new(severity_label(&finding.severity)).fg(color),
             Cell::new(&finding.name).fg(color),
             Cell::new(&finding.reason),
+            Cell::new(&finding.reference),
         ]);
     }
 
@@ -57,6 +59,7 @@ pub fn print_text(findings: &[Finding]) -> String {
             Cell::new("Severity"),
             Cell::new("Check"),
             Cell::new("Finding"),
+            Cell::new("Reference"),
         ]);
 
     for finding in findings {
@@ -65,6 +68,7 @@ pub fn print_text(findings: &[Finding]) -> String {
             Cell::new(severity_label(&finding.severity)).fg(color),
             Cell::new(&finding.name).fg(color),
             Cell::new(&finding.reason),
+            Cell::new(&finding.reference),
         ]);
     }
 
@@ -83,6 +87,7 @@ mod tests {
             severity,
             name: name.to_string(),
             reason: reason.to_string(),
+            reference: String::new(),
         }
     }
 

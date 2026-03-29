@@ -24,6 +24,7 @@ pub fn check_submodules(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                                 severity: Severity::High,
                                 name: "submodule file:// URL".to_string(),
                                 reason: format!("submodule URL uses file:// scheme: {}", value),
+                                reference: String::new(),
                             });
                         }
                         if value.starts_with("ext::") {
@@ -31,6 +32,7 @@ pub fn check_submodules(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                                 severity: Severity::Critical,
                                 name: "submodule ext:: URL".to_string(),
                                 reason: format!("submodule URL uses ext:: protocol: {}", value),
+                                reference: String::new(),
                             });
                         }
                         if value.starts_with("fd::") {
@@ -38,6 +40,7 @@ pub fn check_submodules(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                                 severity: Severity::High,
                                 name: "submodule fd:: URL".to_string(),
                                 reason: format!("submodule URL uses fd:: protocol: {}", value),
+                                reference: String::new(),
                             });
                         }
                     }
@@ -47,6 +50,7 @@ pub fn check_submodules(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                                 severity: Severity::Critical,
                                 name: "submodule update command".to_string(),
                                 reason: format!("submodule update = !command: {}", value),
+                                reference: String::new(),
                             });
                         }
                     }
@@ -56,6 +60,7 @@ pub fn check_submodules(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                                 severity: Severity::Critical,
                                 name: "submodule path traversal".to_string(),
                                 reason: format!("submodule path contains .. components: {}", value),
+                                reference: String::new(),
                             });
                         }
                     }
@@ -98,6 +103,7 @@ pub fn check_submodules(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                                 severity: Severity::Critical,
                                 name: format!("nested modules config: {}", name),
                                 reason: format!("nested module {} has dangerous config: {} = {}", name, key, value),
+                                reference: String::new(),
                             });
                         }
 
@@ -107,6 +113,7 @@ pub fn check_submodules(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                                     severity: Severity::Critical,
                                     name: format!("nested modules config: {}", name),
                                     reason: format!("nested module {} has dangerous remote URL: {}", name, value),
+                                    reference: String::new(),
                                 });
                             }
                         }
@@ -126,6 +133,7 @@ pub fn check_submodules(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                         severity: Severity::Critical,
                         name: format!("nested module hook: {}", hook_name),
                         reason: format!("nested module {} has hook: {}", name, hook_name),
+                        reference: String::new(),
                     });
                 }
             }

@@ -39,6 +39,7 @@ pub fn check_executable_hooks(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
             severity: Severity::High,
             name: format!("hook: {}", file_name),
             reason: format!("executable hook found: {}", file_name),
+            reference: String::new(),
         });
 
         // Symlink detection
@@ -48,6 +49,7 @@ pub fn check_executable_hooks(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                 severity: Severity::Critical,
                 name: format!("hook symlink: {}", file_name),
                 reason: format!("hook {} is a symlink pointing to {}", file_name, target.display()),
+                reference: String::new(),
             });
             continue;
         }
@@ -59,6 +61,7 @@ pub fn check_executable_hooks(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                 severity: Severity::High,
                 name: format!("world-writable hook: {}", file_name),
                 reason: format!("hook {} is world-writable (mode {:04o})", file_name, mode & 0o7777),
+                reference: String::new(),
             });
         }
 
@@ -73,6 +76,7 @@ pub fn check_executable_hooks(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                                 severity: Severity::Medium,
                                 name: format!("unusual shebang: {}", file_name),
                                 reason: format!("hook {} has {} shebang: {}", file_name, lang, first_line),
+                                reference: String::new(),
                             });
                             break;
                         }

@@ -27,6 +27,7 @@ pub fn check_worktrees(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
             severity: Severity::Medium,
             name: format!("worktree: {}", name),
             reason: format!("worktree entry found: {}", name),
+            reference: String::new(),
         });
 
         // Check gitdir file for sensitive paths
@@ -38,6 +39,7 @@ pub fn check_worktrees(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                     severity: Severity::High,
                     name: format!("worktree gitdir: {}", name),
                     reason: format!("worktree {} gitdir points to {}", name, target),
+                    reference: String::new(),
                 });
             }
         }
@@ -50,6 +52,7 @@ pub fn check_worktrees(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                 severity: Severity::High,
                 name: format!("worktree commondir: {}", name),
                 reason: format!("worktree {} commondir points to {}", name, target),
+                reference: String::new(),
             });
         }
     }

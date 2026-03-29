@@ -25,6 +25,7 @@ pub fn check_objects(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                                     obj.file_name().to_string_lossy(),
                                     meta.len() / 1024
                                 ),
+                                reference: String::new(),
                             });
                         }
                     }
@@ -45,6 +46,7 @@ pub fn check_objects(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                             severity: Severity::High,
                             name: "oversized pack file".to_string(),
                             reason: format!("pack file {} is {}KB", name, meta.len() / 1024),
+                            reference: String::new(),
                         });
                     }
                 }
@@ -60,6 +62,7 @@ pub fn check_objects(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                 severity: Severity::Medium,
                 name: "oversized index".to_string(),
                 reason: format!(".git/index is {}KB (possibly crafted)", meta.len() / 1024),
+                reference: String::new(),
             });
         }
     }
@@ -74,6 +77,7 @@ pub fn check_objects(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                     severity: Severity::Critical,
                     name: "alternates".to_string(),
                     reason: format!("alternates points to external path: {}", line),
+                    reference: String::new(),
                 });
             }
         }
@@ -89,6 +93,7 @@ pub fn check_objects(git_dir: &Path) -> anyhow::Result<Vec<Finding>> {
                     severity: Severity::Critical,
                     name: "http-alternates".to_string(),
                     reason: format!("http-alternates references remote: {}", line),
+                    reference: String::new(),
                 });
             }
         }

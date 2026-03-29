@@ -37,6 +37,8 @@ struct SarifRule {
     id: String,
     #[serde(rename = "shortDescription")]
     short_description: SarifMessage,
+    #[serde(rename = "helpUri", skip_serializing_if = "Option::is_none")]
+    help_uri: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -74,6 +76,11 @@ pub fn write_sarif(findings: &[Finding], output: &Path) -> anyhow::Result<()> {
                     id: f.name.clone(),
                     short_description: SarifMessage {
                         text: f.name.clone(),
+                    },
+                    help_uri: if f.reference.is_empty() {
+                        None
+                    } else {
+                        Some(f.reference.clone())
                     },
                 });
             }
@@ -121,6 +128,7 @@ mod tests {
             severity,
             name: name.to_string(),
             reason: reason.to_string(),
+            reference: String::new(),
         }
     }
 
